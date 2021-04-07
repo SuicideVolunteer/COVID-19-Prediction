@@ -1,0 +1,57 @@
+clc
+clear
+tic
+% load SUSY20000;%%导入SUSY
+% load rice;
+load India;
+% load HTRU;
+% load samples;
+% parameters=[5 0.5 5 0.0001 1000 1];%% DNM 参数k q M ita epoch MiniBatchSize
+parameters=[6 0.5 7 100 1000]; % k qs M popsize epoch
+%%Dividedataset
+%% COVID dataset
+DivideBoundary = 300; %%训练集大小
+Dend = n-(L-1)*r-1; % Dend-divideBoundary= 测试集大小
+L=2;
+r=1;
+%% preprocess
+price = India;
+price_n = zeros(L+1, n-(L-1)*r-1);
+for i=1:n-(L-1)*r-1
+    price_n(1:L,i) = price(i:r:i+(L-1)*r);
+    price_n(L+1,i) = price(i+(L-1)*r+1);
+end
+    trainx = price_n(1:L, 1:DivideBoundary); % Training Data
+    trainy = price_n(L+1, 1:DivideBoundary);
+    testx = price_n(1:L, DivideBoundary+1:Dend); % Testing Data
+    testy = price_n(L+1, DivideBoundary+1:Dend);
+%%归一化
+[trainx_normalized, st1] = mapminmax(trainx,0,1);
+[trainy_normalized, st2] = mapminmax(trainy,0,1);
+testx_normalized = mapminmax('apply',testx,st1);  % Make "Testing data" be normalized just the same as that with "Training data".
+testy_normalized = mapminmax('apply',testy,st2);
+
+% for i =1:t_times
+%     
+% % [O1,Error,E, w,q]=D_Model_online(trainx_normalized, trainy_normalized, parameters);
+% [O1, Error, E, w, q, Sample2, MiniFeatrueBatch] = D_Model_Train(trainx_normalized, trainy_normalized, parameters);
+% [O2,~,~,accuracy] = D_Model_Prediction(testx_normalized, testy_normalized,w,q,parameters,Sample2,MiniFeatrueBatch);
+% % [accuracy2, Threshold] = D_model_Prediction_logic_circuit(testx_normalized, testy_normalized, w,q,parameters(3));
+%  Acc1(i)=accuracy;
+% %  Acc2(i)=accuracy2;
+[O Error w q w2] = SFSMS_func(trainx_normalized, trainy_normalized, parameters);
+ trainy_predicated = mapminmax('reverse', O, st2);
+[testy_prediction_nor, Error_prediction, E_prediction]=...,
+             D_Model_Prediction(testx_normalized, testy_normalized, w, q, w2, parameters);
+         testy_prediction = mapminmax('reverse', testy_prediction_nor, st2);
+%%绘制收敛曲线
+figure(1);
+plot(Error);
+legend('Mean Squred Error of Training Phase');
+title('误差计算','FontName','Times New Roman','FontWeight','Bold','FontSize',12);
+xlabel('Learning Epoch','FontName','Times New Roman','FontSize',14);
+ylabel('MSE','FontName','Times New Roman','FontSize',14);
+
+disp(['accuracy:',num2str(accuracy)]);
+% disp(['accuracy2:',num2str(accuracy2)]);
+toc
